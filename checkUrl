@@ -1,0 +1,178 @@
+#!/bin/bash
+
+
+:<<'--HISTORY--'
+Tue Jul  7 10:55:06 CDT 2015
+    kwm / e85993
+	Initial version.  
+	    - Get the contents at a URL
+	    - note timings in tempfile for use by the calling policy
+	    - push timings to graphite
+--HISTORY--
+
+
+###############################################################
+########## Initialization #####################################
+###############################################################
+
+unalias -a # level the playing field
+unset nxtOpt
+
+URLTMPFILE="/var/tmp/URL-contents-1.txt"  # tempfile to hold curl output for policy automatic action.
+
+bin_curl=$(2>/dev/null env which --skip-alias curl) || (echo "ERROR: unable to find curl binary."; exit 1)
+bin_cat=$(2>/dev/null env which --skip-alias cat)   || (echo "ERROR: unable to find cat binary.";  exit 2)
+bin_ls=$(2>/dev/null env which --skip-alias ls)     || (echo "ERROR: unable to find ls binary.";   exit 3)
+bin_rm=$(2>/dev/null env which --skip-alias rm)     || (echo "ERROR: unable to find rm binary.";   exit 4)
+bin_tr=$(2>/dev/null env which --skip-alias tr)     || (echo "ERROR: unable to find tr binary.";   exit 7)
+
+connectTimeout=10
+maxTime=30
+retries=1 
+retryDelay=5 
+
+
+
+
+###############################################################
+########## Functions ##########################################
+###############################################################
+
+#============================================
+helpMsg() {
+    echo "
+    $0:	Retrieve URL contents and report on the results.
+
+	Usage: 
+	$0  [-h][-c connectionTimeout][-m maxTime][-r #retries][-d retryDelay]
+
+	-h  give help message                    optional
+	-c  connection timeout   (default is 10) optional 
+	-m  max time 		 (default is 20) optional
+	-r  retries              (default is 1)  optional
+	-d  retry delay		 (default is 5)  optional
+
+"
+
+}
+
+
+
+###############################################################
+########## MAIN ###############################################
+###############################################################
+
+unset nxtOpt
+while getopts ":hc:m:r:d:" nxtOpt; do
+    case $nxtOpt in
+	h)
+	    helpMsg
+	    # exit 6
+	    ;;
+	c)
+	    connectTimeout=$OPTARG
+	    ;;
+	m)
+	    maxTime=$OPTARG
+	    ;;
+	r)
+	    retries=$OPTARG
+	    ;;
+	d)
+	    retryDelay=$OPTARG
+	    ;;
+	\?)	
+	    echo "Try \"$0 -h\" for help."
+	    exit 5
+	    ;;
+    esac 
+done
+
+
+
+# detecting if no options are given.
+echo "OPTIND: $OPTIND"
+
+if   (( OPTIND == 1 )) ;then
+	echo "empty or null" 
+else 
+	echo "it is set" 
+fi
+
+
+
+
+
+
+
+:<<'--BLOCK-COMMENTS--'
+
+> 2>/var/tmp/kwm-1.txt 
+/usr/bin/curl 
+--connect-timeout 10 
+--max-time 20 
+--remote-time 
+--retry 1 
+--retry-delay 5 
+--silent 
+--trace-time 
+--verbose 
+--write-out "\n---EnTeRpRiSeMoNiToRiNg---\nurl_effective:%{url_effective}\nhttp_code:%{http_code}\nhttp_connect:%{http_connect}\ntime_total:%{time_total}\ntime_namelookup:%{time_namelookup}\ntime_connect:%{time_connect}\ntime_pretransfer:%{time_pretransfer}\ntime_redirect:%{time_redirect}\ntime_starttransfer:%{time_starttransfer}\nsize_download:%{size_download}\nsize_upload:%{size_upload}\nsize_header:%{size_header}\nsize_request:%{size_request}\nspeed_download:%{speed_download}\nspeed_upload:%{speed_upload}\nnum_connects:%{num_connects}\nnum_redirects:%{num_redirects}\n" 
+http://xatapigw01.swacorp.com:8080/moping 
+cat /var/tmp/kwm-1.txt 
+/bin/ls -l /var/tmp/kwm-1.txt
+\rm --verbose /var/tmp/kwm-1.txt 
+ls -l /var/tmp/kwm-1.txt
+
+
+
+
+
+
+example of command in the raw.
+
+[e85993@xlqtem02[/opt/usad/kwm/projects/apiMonitoring/scripts]]
+> 2>/var/tmp/kwm-1.txt /usr/bin/curl --connect-timeout 10 --max-time 20 --remote-time --retry 1 --retry-delay 5 --silent --trace-time --verbose --write-out "\n---EnTeRpRiSeMoNiToRiNg---\nurl_effective:%{url_effective}\nhttp_code:%{http_code}\nhttp_connect:%{http_connect}\ntime_total:%{time_total}\ntime_namelookup:%{time_namelookup}\ntime_connect:%{time_connect}\ntime_pretransfer:%{time_pretransfer}\ntime_redirect:%{time_redirect}\ntime_starttransfer:%{time_starttransfer}\nsize_download:%{size_download}\nsize_upload:%{size_upload}\nsize_header:%{size_header}\nsize_request:%{size_request}\nspeed_download:%{speed_download}\nspeed_upload:%{speed_upload}\nnum_connects:%{num_connects}\nnum_redirects:%{num_redirects}\n" http://xatapigw01.swacorp.com:8080/moping ;cat /var/tmp/kwm-1.txt ;/bin/ls -l /var/tmp/kwm-1.txt; \rm --verbose /var/tmp/kwm-1.txt ;ls -l /var/tmp/kwm-1.txt
+Not Found. Are you using :8183/moping ?
+---EnTeRpRiSeMoNiToRiNg---
+url_effective:http://xatapigw01.swacorp.com:8080/moping
+http_code:404
+http_connect:000
+time_total:0.015
+time_namelookup:0.007
+time_connect:0.010
+time_pretransfer:0.010
+time_redirect:0.000
+time_starttransfer:0.014
+size_download:39
+size_upload:0
+size_header:169
+size_request:177
+speed_download:2659.000
+speed_upload:0.000
+num_connects:1
+num_redirects:0
+10:09:20.590672 * About to connect() to xatapigw01.swacorp.com port 8080
+10:09:20.590895 *   Trying 10.33.12.126... connected
+10:09:20.593470 * Connected to xatapigw01.swacorp.com (10.33.12.126) port 8080
+10:09:20.593602 > GET /moping HTTP/1.1
+10:09:20.593602 > User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5 OpenSSL/0.9.8b zlib/1.2.3 libidn/0.6.5
+10:09:20.593602 > Host: xatapigw01.swacorp.com:8080
+10:09:20.593602 > Accept: */*
+10:09:20.593602 >
+10:09:20.598211 < HTTP/1.1 404 Not Found
+10:09:20.598306 < Server: Apache-Coyote/1.1
+10:09:20.598375 < Connection: close
+10:09:20.598439 < Content-Type: text/plain;charset=UTF-8
+10:09:20.598482 < Content-Length: 39
+10:09:20.598525 < Date: Tue, 07 Jul 2015 15:09:20 GMT
+Closing connection #0
+-rw------- 1 e85993 swauser 769 Jul  7 10:09 /var/tmp/kwm-1.txt
+removed /var/tmp/kwm-1.txt'
+ls: /var/tmp/kwm-1.txt: No such file or directory
+
+[e85993@xlqtem02[/opt/usad/kwm/projects/apiMonitoring/scripts]]
+>
+
+--BLOCK-COMMENTS--
+
